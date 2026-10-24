@@ -1,0 +1,57 @@
+\section{Результаты}
+
+В результате выполнения лабораторной работы была разработана
+кроссплатформенная программа на языке C++17, состоящая из двух отдельных
+исполняемых файлов: родительского и дочернего процессов. Для обмена данными
+между процессами используются два однонаправленных канала.
+
+Первый канал используется для передачи целых чисел от родительского процесса
+дочернему. Через второй канал дочерний процесс сообщает родительскому результат
+обработки очередного числа. Обмен выполняется последовательно: после отправки
+числа родитель ожидает ответ дочернего процесса.
+
+Ключевые особенности полученного решения:
+
+\begin{itemize}
+    \item родительский и дочерний процессы реализованы отдельными программами;
+    \item процессы и каналы создаются непосредственными средствами операционной
+    системы;
+    \item для Linux используются системные вызовы \texttt{pipe()},
+    \texttt{fork()}, \texttt{dup2()}, \texttt{execl()}, \texttt{read()},
+    \texttt{write()} и \texttt{waitpid()};
+    \item для Windows используются функции \texttt{CreatePipe()},
+    \texttt{CreateProcessA()}, \texttt{ReadFile()}, \texttt{WriteFile()} и
+    \texttt{WaitForSingleObject()};
+    \item дескрипторы автоматически освобождаются с помощью RAII-классов;
+    \item некорректный ввод обрабатывается без аварийного завершения программы;
+    \item средства \texttt{std::thread} и \texttt{std::filesystem} не
+    используются.
+\end{itemize}
+
+Пример работы программы:
+
+\begin{lstlisting}[language={}]
+Output file: result.txt
+Number: 4
+Composite number was written to the file.
+Number: 9
+Composite number was written to the file.
+Number: 1
+0 and 1 are neither prime nor composite; value was ignored.
+Number: 8
+Composite number was written to the file.
+Number: 7
+Negative or prime number received. Processes are stopping.
+\end{lstlisting}
+
+После выполнения программы файл \texttt{result.txt} содержит:
+
+\begin{lstlisting}[language={}]
+4
+9
+8
+\end{lstlisting}
+
+Таким образом, составные числа записываются в указанный файл, значения 0 и 1
+игнорируются, а при получении простого или отрицательного числа родительский и
+дочерний процессы корректно завершают работу.
