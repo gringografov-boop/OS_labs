@@ -1,0 +1,58 @@
+898   07:58:46.249299 futex(0x7efe9029c83c, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+898   07:58:46.249607 gettid()          = 898
+898   07:58:46.249654 write(1, "PID=898 TID=898 ROWS=3 COLS=3 TH"..., 48) = 48
+898   07:58:46.249824 clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7efe8fbffce8, parent_tid=0x7efe8fbff990, exit_signal=0, stack=0x7efe8f3ff000, stack_size=0x7fff40, tls=0x7efe8fbff6c0} => {parent_tid=[899]}, 88) = 899
+898   07:58:46.249995 clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7efe8f3fece8, parent_tid=0x7efe8f3fe990, exit_signal=0, stack=0x7efe8ebfe000, stack_size=0x7fff40, tls=0x7efe8f3fe6c0} => {parent_tid=[900]}, 88) = 900
+898   07:58:46.250103 gettid( <unfinished ...>
+899   07:58:46.250114 gettid( <unfinished ...>
+898   07:58:46.250121 <... gettid resumed>) = 898
+899   07:58:46.250130 <... gettid resumed>) = 899
+898   07:58:46.250156 write(1, "START PID=898 TID=898 worker=0 r"..., 42 <unfinished ...>
+899   07:58:46.250170 futex(0x7ffcc578df98, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+898   07:58:46.250182 <... write resumed>) = 42
+898   07:58:46.250196 futex(0x7ffcc578df98, FUTEX_WAKE_PRIVATE, 1) = 1
+899   07:58:46.250216 <... futex resumed>) = 0
+898   07:58:46.250223 futex(0x7ffcc578df54, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+899   07:58:46.250232 write(1, "START PID=898 TID=899 worker=1 r"..., 42) = 42
+899   07:58:46.250260 futex(0x7ffcc578df98, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+900   07:58:46.250267 gettid( <unfinished ...>
+899   07:58:46.250273 <... futex resumed>) = 0
+900   07:58:46.250279 <... gettid resumed>) = 900
+899   07:58:46.250286 futex(0x7ffcc578df54, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+900   07:58:46.250311 write(1, "START PID=898 TID=900 worker=2 r"..., 42) = 42
+900   07:58:46.250336 futex(0x7ffcc578df54, FUTEX_WAKE_PRIVATE, 2147483647) = 2
+899   07:58:46.250355 <... futex resumed>) = 0
+900   07:58:46.250362 futex(0x7ffcc578df54, FUTEX_WAIT_PRIVATE, 3, NULL <unfinished ...>
+899   07:58:46.250368 futex(0x7ffcc578df54, FUTEX_WAIT_PRIVATE, 3, NULL <unfinished ...>
+898   07:58:46.250384 <... futex resumed>) = 0
+898   07:58:46.250401 futex(0x7ffcc578df54, FUTEX_WAKE_PRIVATE, 2147483647) = 2
+899   07:58:46.250421 <... futex resumed>) = 0
+898   07:58:46.250427 gettid( <unfinished ...>
+899   07:58:46.250434 gettid( <unfinished ...>
+898   07:58:46.250440 <... gettid resumed>) = 898
+899   07:58:46.250447 <... gettid resumed>) = 899
+898   07:58:46.250477 write(1, "DONE PID=898 TID=898 worker=0 ro"..., 41 <unfinished ...>
+900   07:58:46.250499 <... futex resumed>) = 0
+899   07:58:46.250508 futex(0x7ffcc578df98, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+898   07:58:46.250515 <... write resumed>) = 41
+900   07:58:46.250521 gettid( <unfinished ...>
+898   07:58:46.250527 futex(0x7ffcc578df98, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+900   07:58:46.250534 <... gettid resumed>) = 900
+898   07:58:46.250541 <... futex resumed>) = 1
+899   07:58:46.250547 <... futex resumed>) = 0
+898   07:58:46.250553 futex(0x7efe8fbffce8, FUTEX_WAIT_BITSET|FUTEX_CLOCK_REALTIME, 2, NULL, FUTEX_BITSET_MATCH_ANY <unfinished ...>
+899   07:58:46.250563 write(1, "DONE PID=898 TID=899 worker=1 ro"..., 41 <unfinished ...>
+900   07:58:46.250582 futex(0x7ffcc578df98, FUTEX_WAIT_PRIVATE, 2, NULL <unfinished ...>
+899   07:58:46.250588 <... write resumed>) = 41
+899   07:58:46.250600 futex(0x7ffcc578df98, FUTEX_WAKE_PRIVATE, 1) = 1
+900   07:58:46.250620 <... futex resumed>) = 0
+900   07:58:46.250632 write(1, "DONE PID=898 TID=900 worker=2 ro"..., 41) = 41
+900   07:58:46.250665 futex(0x7ffcc578df98, FUTEX_WAKE_PRIVATE, 1) = 0
+899   07:58:46.250701 +++ exited with 0 +++
+898   07:58:46.250705 <... futex resumed>) = 0
+898   07:58:46.250720 futex(0x7efe8f3fece8, FUTEX_WAIT_BITSET|FUTEX_CLOCK_REALTIME, 1, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+900   07:58:46.250772 +++ exited with 0 +++
+898   07:58:46.250854 write(3, "3 3\n1 1 1\n1 1 1\n1 1 1\n", 22) = 22
+898   07:58:46.250963 write(3, "3 3\n9 9 9\n9 9 9\n9 9 9\n", 22) = 22
+898   07:58:46.251010 write(1, "TIME_SECONDS=0.001062679 THREADS"..., 35) = 35
+898   07:58:46.251205 +++ exited with 0 +++

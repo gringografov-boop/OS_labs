@@ -1,0 +1,3 @@
+Name:	lab3
+Pid:	820
+Threads:	4

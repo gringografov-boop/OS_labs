@@ -1,0 +1,64 @@
+\begingroup
+\emergencystretch=3em
+\section{Исходная программа}
+Листинги подключаются непосредственно из рабочих исходников
+\texttt{../code/} и общей библиотеки
+\texttt{../../common/code/multithread/}.
+Отдельные копии исходного кода в отчёте не хранятся.
+Пути рассчитаны на компиляцию из каталога \texttt{lab3/report}.
+Журналы проверок и трассировки хранятся отдельно в \texttt{inc/};
+они относятся к запускам, указанным в соответствующих разделах,
+и не обновляются автоматически при изменении исходников.
+
+\subsection{Общие объявления}
+\lstinputlisting[language=C++,caption={Структуры данных и общие функции},captionpos=b]{../code/common.hpp}
+
+\subsection{Интерфейс фильтров}
+\lstinputlisting[language=C++,caption={Результат и интерфейс обработки матрицы},captionpos=b]{../code/filters.hpp}
+
+\subsection{Главная функция}
+\lstinputlisting[language=C++,caption={Аргументы запуска и организация обработки},captionpos=b]{../code/main.cpp}
+
+\subsection{Вспомогательные функции}
+\lstinputlisting[language=C++,caption={Диагностика и измерение времени},captionpos=b]{../code/common.cpp}
+
+\subsection{Матрицы и файловый ввод-вывод}
+\lstinputlisting[language=C++,caption={Хранение и проверка элементов матрицы},captionpos=b]{../code/matrix.cpp}
+
+\subsection{Многопоточные фильтры}
+\lstinputlisting[language=C++,caption={Фильтрация через интерфейс mt},captionpos=b]{../code/filters.cpp}
+
+\subsection{Интерфейс библиотеки потоков}
+\lstinputlisting[language=C++,caption={Интерфейс библиотеки mt},captionpos=b]{../../common/code/multithread/mt.h}
+
+\subsection{Платформенная реализация потоков}
+\lstinputlisting[language=C++,caption={Реализация через POSIX Threads в Linux},captionpos=b]{../../common/code/multithread/mt_posix.cpp}
+
+\subsection{Интерфейс синхронизации}
+\lstinputlisting[language=C++,caption={Мьютекс и барьер},captionpos=b]{../../common/code/multithread/mt_sync.h}
+
+\subsection{Реализация синхронизации}
+\lstinputlisting[language=C++,caption={Операции POSIX-синхронизации},captionpos=b]{../../common/code/multithread/mt_sync_posix.cpp}
+
+\section{Трассировка системных вызовов}
+Контрольный запуск трассировался командой следующего вида:
+\begin{lstlisting}[language=bash,numbers=none]
+strace -f -tt -o inc/strace.txt \
+  -e trace=clone,clone3,futex,gettid,write \
+  ./lab3 -i small.txt -t 3 -k 2 -w 3 -o trace_result -v
+\end{lstlisting}
+Полный фактический журнал приведён ниже.
+В нём видны два успешных \texttt{clone3} для двух дополнительных потоков,
+вызовы \texttt{gettid} и операции \texttt{futex}.
+Вместе с главным потоком это соответствует \(P=3\).
+Операции \texttt{futex} могут относиться как к примитивам
+синхронизации, так и к ожиданию завершения; не каждому вызову
+\texttt{pthread\_*} обязательно соответствует отдельный системный вызов.
+См. также
+\href{https://man7.org/linux/man-pages/man2/clone.2.html}{clone(2)},
+\href{https://man7.org/linux/man-pages/man2/futex.2.html}{futex(2)} и
+\href{https://man7.org/linux/man-pages/man1/strace.1.html}{strace(1)}.
+
+\lstinputlisting[language={},basicstyle=\scriptsize\ttfamily,numbers=none,breaklines=true,caption={Реальная трассировка контрольного запуска},captionpos=b]{inc/strace.txt}
+\clearpage
+\endgroup

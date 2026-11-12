@@ -1,0 +1,5 @@
+  PID   TID NLWP COMMAND
+  820   820    4 lab3
+  820   821    4 lab3
+  820   822    4 lab3
+  820   823    4 lab3
