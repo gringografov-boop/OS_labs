@@ -14,3 +14,9 @@ if(NOT TARGET lab4_parent)
     add_subdirectory(lab4)
 endif()
 # END lab4 integration
+
+# BEGIN lab5 integration
+if(NOT TARGET lab5_static)
+    add_subdirectory(lab5)
+endif()
+# END lab5 integration

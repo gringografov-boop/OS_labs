@@ -1,0 +1,7 @@
+PASS program 1 linked implementation
+PASS switching both contracts
+PASS invalid input and EOF
+PASS 200 load/unload switches
+PASS relocation and missing replacement library
+All integration checks passed
+exit code: 0

@@ -1,0 +1,38 @@
+\section{Метод решения}
+Обе библиотеки экспортируют одинаковые имена \texttt{Derivative} и \texttt{Square}. Объявления помещены в \texttt{api.h}, а реализации --- в \texttt{impl1.cpp} и \texttt{impl2.cpp}. Связывание \texttt{extern "C"} исключает декорирование имён по правилам C++, необходимое для перегрузки функций. В Windows экспорт и импорт задаются через \texttt{\_\_declspec(dllexport)} и \texttt{\_\_declspec(dllimport)}.
+
+\subsection{Программа №1: подключение при компоновке}
+Цель \texttt{lab5\_static} связана с \texttt{lab5\_impl1} командой \texttt{target\_link\_libraries}. В Windows компоновщик использует импортную библиотеку, а DLL загружается системой при запуске. Код функций не включается в исполняемый файл как при статической компоновке: название программы условное, обе реализации собираются как \texttt{SHARED}~\cite{loadtime}.
+
+\subsection{Программа №2: загрузка во время исполнения}
+Цель \texttt{lab5\_dynamic} не связана с библиотеками реализаций. Зависимость сборки \texttt{add\_dependencies} лишь обеспечивает их создание. Класс \texttt{Library} открывает модуль и получает адреса обеих функций. В Windows используются \texttt{LoadLibraryW}, \texttt{GetProcAddress}, \texttt{FreeLibrary}; в Linux --- \texttt{dlopen}, \texttt{dlsym}, \texttt{dlclose}~\cite{runtime,dlopen,dlsym}.
+
+Программа №2 не включает \texttt{api.h}: ей достаточно строковых имён и типа \texttt{float (*)(float,float)} из общего диалога. Поиск имени не проверяет сигнатуру машинного кода, поэтому совместимость контракта должна обеспечиваться разработчиком библиотеки.
+
+Путь строится из каталога исполняемого файла, полученного существующей функцией \texttt{os::ExecutablePath()}, и относительного имени DLL либо SO. Каталог сборки не зашит в программу; рабочий каталог запуска может быть другим. При этом непосредственно системному загрузчику передаётся сформированный полный путь, а не буквально относительная строка. Это уточнение важно при строгой трактовке требования об относительных путях.
+
+\subsection{Переключение и время жизни}
+Начальной является реализация 1. Команда \texttt{0} сначала загружает другую библиотеку и проверяет обе функции. Только затем указатели заменяются, владельцы модулей обмениваются через \texttt{swap}, а старый объект уничтожается. Вызовов по адресам выгруженного модуля не производится. Деструктор освобождает ссылку загрузчика; фактическая выгрузка зависит от оставшихся ссылок на модуль~\cite{runtime,dlopen}.
+
+Если загрузка или поиск символов не удались, выбрасывается исключение, выводится диагностика и программа завершается с кодом 1. Продолжение работы на старой реализации после такой ошибки текущим кодом не предусмотрено.
+
+\section{Описание программы}
+\begin{itemize}
+\item \texttt{code/include/api.h} --- экспортируемый контракт.
+\item \texttt{code/impl1.cpp}, \texttt{code/impl2.cpp} --- две реализации.
+\item \texttt{code/include/dialog.h} --- разбор ввода и вызов функций через указатели.
+\item \texttt{code/static.cpp} --- программа №1.
+\item \texttt{code/dynamic.cpp} --- программа №2 и управление модулями.
+\item \texttt{tests/test\_lab5.py} --- интеграционные проверки.
+\end{itemize}
+Ошибки ввода выводятся в \texttt{stderr}, после них чтение продолжается. Проверяется конечность результата. Для путей Windows используется преобразование UTF-8 в UTF-16. Исходники общего модуля \texttt{os} не изменялись.
+
+\section{Исходный код}
+Листинги подключены из рабочих файлов относительно корня \texttt{Operation-Systems}.
+\lstinputlisting[language=C++,caption={Контракт библиотеки}]{lab5/code/include/api.h}
+\lstinputlisting[language=C++,caption={Реализация 1}]{lab5/code/impl1.cpp}
+\lstinputlisting[language=C++,caption={Реализация 2}]{lab5/code/impl2.cpp}
+\lstinputlisting[language=C++,caption={Общий диалог}]{lab5/code/include/dialog.h}
+\lstinputlisting[language=C++,caption={Программа №1}]{lab5/code/static.cpp}
+\lstinputlisting[language=C++,caption={Программа №2}]{lab5/code/dynamic.cpp}
+\lstinputlisting[language={},caption={Конфигурация сборки}]{lab5/CMakeLists.txt}
