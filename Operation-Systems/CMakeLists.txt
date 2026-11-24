@@ -8,3 +8,9 @@ if(NOT TARGET lab3)
     add_subdirectory(lab3)
 endif()
 # END lab3-mt integration
+
+# BEGIN lab4 integration
+if(NOT TARGET lab4_parent)
+    add_subdirectory(lab4)
+endif()
+# END lab4 integration

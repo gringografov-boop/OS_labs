@@ -1,0 +1,84 @@
+\section{Сборка и проверка работы}
+\subsection{Среда сборки}
+Проверка выполнена на одном компьютере в двух средах.
+
+\begin{center}
+\begin{tabular}{p{0.2\textwidth}p{0.7\textwidth}}
+Среда & Состав \\
+\hline
+Windows & Microsoft Windows NT 10.0.26200.0, Visual Studio 18 2026, компилятор MSVC 19.51.36260.0, конфигурация Release \\
+Linux & WSL2, Ubuntu 24.04.3 LTS, ядро 6.6.87.2-microsoft-standard-WSL2, g++ 13.3.0, CMake 3.28.3, Python 3.12.3, конфигурация Release \\
+\end{tabular}
+\end{center}
+
+Из корня проекта \texttt{Operation-Systems} для Windows выполнены команды:
+\begin{verbatim}
+cmake -S . -B build-lab4
+cmake --build build-lab4 --config Release --target lab4_parent lab4_child
+\end{verbatim}
+
+Для Linux:
+\begin{verbatim}
+cmake -S . -B /tmp/lab4-wsl -DCMAKE_BUILD_TYPE=Release
+cmake --build /tmp/lab4-wsl --target lab4_parent lab4_child
+\end{verbatim}
+
+Сборка в обеих средах завершилась без ошибок компиляции и компоновки. В Windows созданы файлы \texttt{lab4\_parent.exe} и \texttt{lab4\_child.exe}, в Linux --- \texttt{lab4\_parent} и \texttt{lab4\_child}. Обе программы должны находиться в одной папке: родитель ищет ребёнка рядом с собой.
+
+\subsection{Контрольный пример}
+Последовательность ввода:
+\begin{verbatim}
+result.txt
+4
+6
+9
+17
+\end{verbatim}
+
+Числа 4, 6 и 9 составные и записываются в файл, число 17 простое и завершает работу обоих процессов. Ниже приведён фактический вывод программы в Linux и содержимое выходного файла. Приглашения идут подряд, так как ввод подавался из файла.
+
+\lstinputlisting[language={},basicstyle=\footnotesize\ttfamily,numbers=none,breaklines=true,caption={Запуск в Linux (WSL2)},captionpos=b]{\labroot/inc/run_linux.txt}
+
+Тот же сценарий в Windows дал тот же вывод и то же содержимое файла; после завершения программы во временной папке не осталось файлов \texttt{lm4*.tmp}.
+
+\lstinputlisting[language={},basicstyle=\footnotesize\ttfamily,numbers=none,breaklines=true,caption={Запуск в Windows},captionpos=b]{\labroot/inc/run_windows.txt}
+
+\subsection{Трассировка системных вызовов}
+Для подтверждения того, что обе программы используют один отображаемый файл, запуск в Linux был проверен командой \texttt{strace -f -e trace=execve,openat,ftruncate,mmap,unlink,clone}. Из журнала отобраны строки, относящиеся к отображаемому файлу.
+
+\lstinputlisting[language={},basicstyle=\scriptsize\ttfamily,numbers=none,breaklines=true,caption={Фрагмент трассировки (процесс 984 --- родитель, 985 --- ребёнок)},captionpos=b]{\labroot/inc/strace_lab4.txt}
+
+В журнале видно следующее. Родитель создаёт файл \texttt{/tmp/lab4\_map\_y4gIiw} и отображает 600 байт с флагом \texttt{MAP\_SHARED}: это общая структура и два семафора. Затем создаётся процесс 985, который запускает \texttt{lab4\_child} с путём к файлу первым аргументом. Ребёнок открывает тот же файл и отображает тот же размер. В конце родитель удаляет файл вызовом \texttt{unlink}~\cite{linuxmmap}.
+
+\subsection{Автоматические тесты}
+Из корня проекта запускается скрипт, который создаёт настоящие процессы во временных папках:
+\begin{verbatim}
+python lab4/tests/test_lab4.py build-lab4/bin/lab4/lab4_parent.exe
+python3 lab4/tests/test_lab4.py /tmp/lab4-wsl/bin/lab4/lab4_parent
+\end{verbatim}
+
+В Windows пройдено 25 тестов, в Linux --- 26: дополнительный тест в Linux проверяет, что при уничтожении ребёнка сигналом \texttt{SIGKILL} родитель сообщает об ошибке и не зависает. В Windows этот тест пропускается, так как для поиска процесса используется утилита \texttt{pgrep}.
+
+\begin{center}
+\begin{tabular}{p{0.34\textwidth}p{0.56\textwidth}}
+Входные данные & Ожидаемый результат \\
+\hline
+\texttt{4, 6, 9, 17, 25} & Запись 4, 6, 9, завершение на 17 \\
+\texttt{8, -4, 10} & Запись 8, завершение на отрицательном значении \\
+\texttt{2} & Завершение без записи \\
+\texttt{0, 1, 4, -1} & Пропуск 0 и 1, запись 4 \\
+Конец ввода & Команда \texttt{Stop}, нормальное завершение \\
+Текст, два числа, пустая строка & Сообщение об ошибке ввода, обмен продолжается \\
+Значения вне \texttt{int} & Отклонение команды \\
+2147483647 и 2147483646 & Простое число завершает работу, чётное записывается \\
+Строка 200000 символов & Отклонение: строка не помещается в буфер \\
+Строка 251 и 256 байт & Первая принимается, вторая отклоняется \\
+Имя файла с пробелами и русскими буквами & Файл создан и заполнен \\
+Недоступный выходной каталог & Ошибка и код завершения 1 \\
+Отсутствует \texttt{lab4\_child} & Ошибка запуска, ненулевой код \\
+2000 команд подряд & Все составные числа записаны в том же порядке \\
+Уничтоженный ребёнок (Linux) & Сообщение об ошибке, родитель не зависает \\
+\end{tabular}
+\end{center}
+
+После всех тестов во временной папке не остаётся файлов отображения. Измерения производительности не проводились: они не входят в задание. Проверка Linux-реализации выполнена в WSL2, а не на отдельном компьютере с Linux.

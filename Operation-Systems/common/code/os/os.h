@@ -40,4 +40,5 @@ void KillProc(ProcessHandle process, std::uint32_t code = 1);
 std::string ExecutablePath();
 std::string GenerateAppCmd(const char* cmd, const std::vector<std::string>& args);
 void PreparePipeIO(); // Linux: turn SIGPIPE into a write error; Windows: no-op.
+bool IsProcRunning(ProcessHandle process); // Non-blocking check; exit code stays available via WaitProc.
 } // namespace os

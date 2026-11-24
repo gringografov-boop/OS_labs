@@ -158,6 +158,13 @@ void os::KillProc(ProcessHandle process, std::uint32_t code) {
     if (!process) throw std::invalid_argument("Null process handle");
     if (!::TerminateProcess(process->handle, code)) Fail("TerminateProcess");
 }
+bool os::IsProcRunning(ProcessHandle process) {
+    if (!process) throw std::invalid_argument("Null process handle");
+    const DWORD state = ::WaitForSingleObject(process->handle, 0);
+    if (state == WAIT_TIMEOUT) return true;
+    if (state != WAIT_OBJECT_0) Fail("WaitForSingleObject");
+    return false;
+}
 std::string os::ExecutablePath() {
     std::vector<wchar_t> buffer(512);
     for (;;) {

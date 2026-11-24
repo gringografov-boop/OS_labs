@@ -1,0 +1,113 @@
+\section{Метод решения}
+Решение разделено на общую логику лабораторной работы №2, платформенный слой процессов и новый модуль \texttt{ipc}. Родительская программа читает ввод пользователя, дочерняя проверяет числа и записывает результат. Модуль \texttt{ipc} создаёт отображаемый файл и объекты уведомления; он скрывает различия Windows и Linux за классом \texttt{ipc::Channel}.
+
+\subsection{Отображаемый файл}
+Родитель создаёт временный файл размером с общую структуру и отображает его в своё адресное пространство. Дочерний процесс получает путь к этому файлу аргументом командной строки, открывает его и отображает у себя. Обе программы видят одни и те же страницы памяти, поэтому запись одного процесса становится видна другому без передачи данных через ядро~\cite{linuxmmap,winsharing,winmapping}.
+
+\begin{center}
+\begin{tabular}{lll}
+Действие & Linux & Windows \\
+\hline
+Создание файла & \texttt{mkstemp}, \texttt{ftruncate} & \texttt{GetTempFileNameW}, \texttt{CreateFileW} \\
+Отображение & \texttt{mmap(MAP\_SHARED)} & \texttt{CreateFileMappingW}, \texttt{MapViewOfFile} \\
+Открытие дочерним & \texttt{open}, \texttt{mmap} & \texttt{CreateFileW}, \texttt{MapViewOfFile} \\
+Удаление файла & \texttt{unlink} в родителе & \texttt{FILE\_FLAG\_DELETE\_ON\_CLOSE} \\
+\end{tabular}
+\end{center}
+
+В Windows временный файл открывается с флагом удаления при закрытии и режимом разделения \texttt{FILE\_SHARE\_DELETE}. Флаг действует после закрытия последнего дескриптора файла, поэтому дочерний процесс может открыть тот же файл, пока родитель его не закрыл~\cite{deleteonclose}.
+
+\subsection{Синхронизация}
+Общая память не уведомляет другой процесс о появлении данных. Поэтому каждое направление обмена снабжено собственным объектом ожидания: <<запрос готов>> для передачи от родителя к ребёнку и <<ответ готов>> для обратного направления. Родитель всегда записывает команду, подаёт сигнал запроса и ждёт ответа. Ребёнок ждёт запроса, обрабатывает его, записывает ответ и подаёт сигнал. В каждый момент записывает в общую структуру только один процесс, поэтому дополнительные блокировки не нужны.
+
+В Linux используются неименованные семафоры POSIX. Они размещены в самом отображаемом файле и инициализируются вызовом \texttt{sem\_init} с ненулевым параметром \texttt{pshared}, что позволяет использовать их из разных процессов~\cite{linuxsem,linuxsemoverview}. В Windows используются именованные события (\texttt{CreateEventW} в родителе и \texttt{OpenEventW} в ребёнке) с автоматическим сбросом. Имя события строится из уникального имени временного файла~\cite{winevent}.
+
+\subsection{Протокол обмена}
+Общая структура \texttt{ipc::Block} содержит команду, ответ, идентификатор родителя, длину строки, признак переполнения, буфер строки на 256 байт и буфер текста ошибки на 256 байт.
+
+\begin{center}
+\begin{tabular}{ll}
+Команда (родитель) & Значение \\
+\hline
+\texttt{Line} & В буфере лежит строка с числом \\
+\texttt{Stop} & Конец ввода: ребёнку следует завершиться \\
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{ll}
+Ответ (ребёнок) & Значение \\
+\hline
+\texttt{Ready} & Выходной файл открыт, ребёнок готов \\
+\texttt{Written} & Составное число записано в файл \\
+\texttt{Ignored} & Число 0 или 1 пропущено \\
+\texttt{Invalid} & Ошибка формата, выход за диапазон \texttt{int} или слишком длинная строка \\
+\texttt{Stop} & Получено простое или отрицательное число \\
+\texttt{Stopped} & Подтверждение команды \texttt{Stop} \\
+\texttt{Error} & Системная ошибка в ребёнке, текст записан в \texttt{errorText} \\
+\end{tabular}
+\end{center}
+
+Ребёнок сначала открывает выходной файл и только после этого подаёт ответ \texttt{Ready}. Родитель не принимает числа до его получения, поэтому ошибка открытия файла обнаруживается до начала обработки. После этого на каждую строку приходит ровно один ответ.
+
+\subsection{Завершение и аварийные ситуации}
+Ожидание сигнала выполняется с периодом 100~мс. При каждом истечении периода проверяется, жив ли второй процесс. Родитель вызывает \texttt{os::IsProcRunning}. Ребёнок проверяет, существует ли родитель с идентификатором, записанным в общую структуру: в Linux сравнивается результат \texttt{getppid}, в Windows открывается дескриптор процесса вызовом \texttt{OpenProcess}. Без такой проверки гибель одного процесса оставила бы второй в бесконечном ожидании. Перед признанием партнёра погибшим выполняется ещё одна неблокирующая попытка получить сигнал, поскольку ответ мог прийти непосредственно перед завершением.
+
+Общая память освобождается родителем после завершения ребёнка. Это исключает уничтожение семафора, пока второй процесс ещё может обратиться к нему.
+
+\section{Описание программы}
+\subsection{Структура файлов}
+Пути приведены относительно корня проекта \texttt{Operation-Systems}.
+
+\begin{itemize}
+\item \texttt{lab4/code/parent/main.cpp} --- ввод имени файла и команд, запуск ребёнка, обмен через канал, ожидание завершения.
+\item \texttt{lab4/code/child/main.cpp} --- обработка команд, проверка чисел и запись результатов.
+\item \texttt{lab4/code/include/ipc.h} --- общая структура, перечисления команд и ответов, интерфейс канала.
+\item \texttt{lab4/code/ipc\_posix.cpp} --- реализация канала для Linux.
+\item \texttt{lab4/code/ipc\_win.cpp} --- реализация канала для Windows.
+\item \texttt{lab2/code/common.cpp} --- разбор числа и проверка простоты (общая логика).
+\item \texttt{common/code/os/} --- запуск процессов и запись файла; добавлена функция \texttt{os::IsProcRunning}.
+\end{itemize}
+
+\subsection{Основные типы и функции}
+\texttt{ipc::Channel::Create} вызывается родителем, а \texttt{ipc::Channel::Open} --- ребёнком. Метод \texttt{block} возвращает ссылку на общую структуру. \texttt{SignalRequest} и \texttt{SignalResponse} подают сигналы, а \texttt{WaitRequest} и \texttt{WaitResponse} ожидают их и возвращают \texttt{false}, если партнёр погиб. Деструктор канала освобождает отображение, объекты синхронизации и временный файл.
+
+\texttt{os::IsProcRunning} --- неблокирующая проверка состояния процесса. В Linux она вызывает \texttt{waitpid} с флагом \texttt{WNOHANG}, и полученный код завершения сохраняется для последующего \texttt{os::WaitProc}. В Windows вызывается \texttt{WaitForSingleObject} с нулевым таймаутом. Остальные функции платформенного слоя не изменялись.
+
+\subsection{Используемые средства Linux}
+\begin{itemize}
+\item \texttt{mkstemp}, \texttt{ftruncate}, \texttt{open}, \texttt{fstat}, \texttt{unlink} --- создание, проверка размера и удаление файла.
+\item \texttt{mmap}, \texttt{munmap} --- отображение файла в память.
+\item \texttt{sem\_init}, \texttt{sem\_post}, \texttt{sem\_timedwait}, \texttt{sem\_trywait}, \texttt{sem\_destroy} --- уведомления между процессами.
+\item \texttt{fork}, \texttt{execv}, \texttt{waitpid}, \texttt{getppid} --- запуск, ожидание и проверка живости процессов.
+\end{itemize}
+
+\subsection{Используемые средства Windows}
+\begin{itemize}
+\item \texttt{GetTempPathW}, \texttt{GetTempFileNameW}, \texttt{CreateFileW} --- создание временного файла.
+\item \texttt{CreateFileMappingW}, \texttt{MapViewOfFile}, \texttt{UnmapViewOfFile} --- отображение файла в память.
+\item \texttt{CreateEventW}, \texttt{OpenEventW}, \texttt{SetEvent}, \texttt{WaitForSingleObject} --- события и ожидание.
+\item \texttt{OpenProcess}, \texttt{CreateProcessW} --- проверка родителя и запуск ребёнка.
+\item \texttt{MultiByteToWideChar}, \texttt{WideCharToMultiByte} --- преобразование путей. Путь к временной папке может содержать русские буквы, поэтому ребёнок использует точку входа \texttt{wmain}.
+\end{itemize}
+
+\subsection{Обработка ошибок}
+Ошибки системных вызовов преобразуются в исключения с названием операции и кодом ОС. Внешние обработчики выводят диагностику в \texttt{stderr} и возвращают ненулевой код. Если ребёнок не смог записать число в файл, он помещает текст ошибки в общую структуру, отвечает \texttt{Error} и завершается с кодом 1. Если ребёнок не смог открыть выходной файл, он завершается до ответа \texttt{Ready}, а родитель обнаруживает это при ожидании и также возвращает ошибку. При любом исключении в родителе работающий ребёнок принудительно завершается.
+
+\section{Исходный код}
+Листинги подключаются непосредственно из рабочих исходников; отдельные копии кода в отчёте не хранятся.
+
+\subsection{Общий интерфейс канала}
+\lstinputlisting[language=C++,caption={Структура общей памяти и интерфейс канала},captionpos=b]{\codedir/include/ipc.h}
+
+\subsection{Реализация для Linux}
+\lstinputlisting[language=C++,caption={Отображаемый файл и семафоры POSIX},captionpos=b]{\codedir/ipc_posix.cpp}
+
+\subsection{Реализация для Windows}
+\lstinputlisting[language=C++,caption={Отображаемый файл и именованные события},captionpos=b]{\codedir/ipc_win.cpp}
+
+\subsection{Родительский процесс}
+\lstinputlisting[language=C++,caption={Ввод, запуск ребёнка и обмен через канал},captionpos=b]{\codedir/parent/main.cpp}
+
+\subsection{Дочерний процесс}
+\lstinputlisting[language=C++,caption={Обработка команд и запись составных чисел},captionpos=b]{\codedir/child/main.cpp}

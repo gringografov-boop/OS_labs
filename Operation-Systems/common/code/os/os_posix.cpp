@@ -160,6 +160,18 @@ void os::KillProc(ProcessHandle process, std::uint32_t) {
     if (!process) throw std::invalid_argument("Null process handle");
     if (::kill(process->pid, SIGTERM) < 0) Fail("kill");
 }
+bool os::IsProcRunning(ProcessHandle process) {
+    if (!process) throw std::invalid_argument("Null process handle");
+    if (process->waited) return false;
+    int status = 0;
+    pid_t result;
+    do { result = ::waitpid(process->pid, &status, WNOHANG); } while (result < 0 && errno == EINTR);
+    if (result < 0) Fail("waitpid");
+    if (result == 0) return true;
+    process->result = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+    process->waited = true;
+    return false;
+}
 std::string os::ExecutablePath() {
     std::vector<char> buffer(512);
     for (;;) {

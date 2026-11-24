@@ -1,0 +1,9 @@
+Output file: Number: Composite number was written to the file.
+Number: Composite number was written to the file.
+Number: Composite number was written to the file.
+Number: Negative or prime number received. Processes are stopping.
+exit code: 0
+result.txt:
+4
+6
+9
